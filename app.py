@@ -69,133 +69,8 @@ with col_f2:
 
 st.divider()
 
-# --- SEÇÃO 3: GERAÇÃO DO RELATÓRIO PDF ---
-class RelatorioPDF(FPDF):
-    def __init__(self, cod_cliente="", nome_cliente=""):
-        super().__init__()
-        self.cod_cliente = cod_cliente.replace(".", "").strip().upper() if cod_cliente else ""
-        self.nome_cliente = nome_cliente.strip().upper() if nome_cliente else ""
-
-    def header(self):
-        if os.path.exists(LOGO2_PATH):
-            self.image(LOGO2_PATH, x=10, y=8, w=45)
-
-        if self.page_no() == 1:
-            self.set_y(10)
-            self.set_font("Arial", "B", 15)
-            self.cell(0, 8, "RELATÓRIO DE FOTOS", align="C", ln=1)
-            
-            info_cabecalho = f"{self.cod_cliente} | {self.nome_cliente}".strip(" |")
-            if info_cabecalho:
-                self.set_font("Arial", "B", 11)
-                self.cell(0, 6, info_cabecalho, align="C", ln=1)
-            
-            self.set_y(35)
-        else:
-            self.set_y(35)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("Arial", "I", 8)
-        self.cell(0, 10, f"Página {self.page_no()}", align="C")
-
-def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
-    pdf = RelatorioPDF(cod_cliente, nome_cliente)
-    pdf.set_margins(10, 35, 10)
-    pdf.set_auto_page_break(auto=True, margin=20)
-    pdf.add_page()
-
-    if equipamentos:
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1, align="L")
-        pdf.ln(2)
-        
-        # Cabeçalho da Tabela
-        pdf.set_font("Arial", "B", 10)
-        pdf.set_fill_color(230, 230, 230)
-        pdf.cell(20, 7, "QTD", border=1, align="C", fill=True)
-        pdf.cell(120, 7, "EQUIPAMENTO", border=1, align="C", fill=True)
-        pdf.cell(50, 7, "VAZÃO TOTAL (KG/H)", border=1, align="C", fill=True, ln=1)
-        
-        # Linhas de Equipamentos da Tabela
-        pdf.set_font("Arial", "", 10)
-        total_vazao = 0.0
-        for item in equipamentos:
-            total_vazao += item["vazao_total_item"]
-            vazao_item_str = f"{item['vazao_total_item']:.2f}".replace('.', ',').rstrip('0').rstrip(',')
-            if not vazao_item_str or vazao_item_str == ",":
-                vazao_item_str = "0"
-            
-            pdf.cell(20, 6, f"{item['qtd']:02d}", border=1, align="C")
-            pdf.cell(120, 6, f"{item['nome']}", border=1, align="L")
-            pdf.cell(50, 6, f"{vazao_item_str} kg/h", border=1, align="C", ln=1)
-        
-        # Linha com o Total da Vazão
-        vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
-        if not vazao_total_str or vazao_total_str == ",":
-            vazao_total_str = "0"
-
-        pdf.set_font("Arial", "B", 10)
-        pdf.cell(140, 7, "VAZÃO TOTAL:", border=1, align="R", fill=True)
-        pdf.cell(50, 7, f"{vazao_total_str} kg/h", border=1, align="C", fill=True, ln=1)
-        pdf.ln(6)
-
-    for categoria, arquivos in dic_fotos.items():
-        if arquivos:
-            pdf.set_font("Arial", "B", 11)
-            pdf.cell(0, 6, categoria.upper(), ln=1, align="L")
-            
-            for idx, arq in enumerate(arquivos):
-                try:
-                    img = Image.open(arq)
-                    if img.mode != "RGB":
-                        img = img.convert("RGB")
-                    
-                    temp_path = f"temp_{categoria}_{idx}.jpg"
-                    img.save(temp_path)
-                    
-                    pdf.image(temp_path, x="C", w=140)
-                    pdf.ln(6)
-                    
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-                except Exception as e:
-                    pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1, align="L")
-
-    return bytes(pdf.output())
-
-st.subheader("3. Geração do Relatório")
-
-if st.button("📄 Gerar Relatório PDF"):
-    dicionario_fotos = {
-        "FACHADA": fotos_fachada,
-        "ABRIGO": fotos_abrigo,
-        "CENTRAL": fotos_central,
-        "EQUIPAMENTOS": fotos_equipamentos
-    }
-    
-    pdf_out = gerar_pdf(
-        st.session_state.equipamentos,
-        dicionario_fotos,
-        cod_cliente,
-        nome_cliente
-    )
-    
-    cod_formatado = cod_cliente.replace(".", "").strip().upper() if cod_cliente else ""
-    nome_arquivo_pdf = f"fotos_{cod_formatado}.pdf" if cod_formatado else "fotos.pdf"
-
-    st.success("✅ Relatório gerado com sucesso!")
-    st.download_button(
-        label="📥 Baixar Relatório (PDF)",
-        data=pdf_out,
-        file_name=nome_arquivo_pdf,
-        mime="application/pdf"
-    )
-
-st.divider()
-
-# --- SEÇÃO 4: CADASTRO DE EQUIPAMENTOS ---
-st.subheader("4. Cadastro de Equipamentos")
+# --- SEÇÃO 3: CADASTRO DE EQUIPAMENTOS ---
+st.subheader("3. Cadastro de Equipamentos")
 
 col_qtd, col_eq, col_vaz, col_btn = st.columns([1, 2, 2, 1])
 
@@ -248,3 +123,130 @@ if st.session_state.equipamentos:
 
     vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
     st.markdown(f"**VAZÃO TOTAL: {vazao_total_str} kg/h**")
+
+st.divider()
+
+# --- SEÇÃO 4: GERAÇÃO DO RELATÓRIO PDF ---
+class RelatorioPDF(FPDF):
+    def __init__(self, cod_cliente="", nome_cliente=""):
+        super().__init__()
+        self.cod_cliente = cod_cliente.replace(".", "").strip().upper() if cod_cliente else ""
+        self.nome_cliente = nome_cliente.strip().upper() if nome_cliente else ""
+
+    def header(self):
+        if os.path.exists(LOGO2_PATH):
+            self.image(LOGO2_PATH, x=10, y=8, w=45)
+
+        if self.page_no() == 1:
+            self.set_y(10)
+            self.set_font("Arial", "B", 15)
+            self.cell(0, 8, "RELATÓRIO DE FOTOS", align="C", ln=1)
+            
+            info_cabecalho = f"{self.cod_cliente} | {self.nome_cliente}".strip(" |")
+            if info_cabecalho:
+                self.set_font("Arial", "B", 11)
+                self.cell(0, 6, info_cabecalho, align="C", ln=1)
+            
+            self.set_y(35)
+        else:
+            self.set_y(35)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("Arial", "I", 8)
+        self.cell(0, 10, f"Página {self.page_no()}", align="C")
+
+def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
+    pdf = RelatorioPDF(cod_cliente, nome_cliente)
+    pdf.set_margins(10, 35, 10)
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+
+    # 1. Renderiza as Fotos Primeiro
+    for categoria, arquivos in dic_fotos.items():
+        if arquivos:
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 6, categoria.upper(), ln=1, align="L")
+            
+            for idx, arq in enumerate(arquivos):
+                try:
+                    img = Image.open(arq)
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+                    
+                    temp_path = f"temp_{categoria}_{idx}.jpg"
+                    img.save(temp_path)
+                    
+                    pdf.image(temp_path, x="C", w=140)
+                    pdf.ln(6)
+                    
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                except Exception as e:
+                    pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1, align="L")
+
+    # 2. Renderiza a Tabela de Equipamentos ao Final do Relatório
+    if equipamentos:
+        pdf.ln(4)
+        pdf.set_font("Arial", "B", 11)
+        pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1, align="L")
+        pdf.ln(2)
+        
+        # Cabeçalho da Tabela
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_fill_color(230, 230, 230)
+        pdf.cell(20, 7, "QTD", border=1, align="C", fill=True)
+        pdf.cell(120, 7, "EQUIPAMENTO", border=1, align="C", fill=True)
+        pdf.cell(50, 7, "VAZÃO TOTAL (KG/H)", border=1, align="C", fill=True, ln=1)
+        
+        # Linhas da Tabela
+        pdf.set_font("Arial", "", 10)
+        total_vazao = 0.0
+        for item in equipamentos:
+            total_vazao += item["vazao_total_item"]
+            vazao_item_str = f"{item['vazao_total_item']:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+            if not vazao_item_str or vazao_item_str == ",":
+                vazao_item_str = "0"
+            
+            pdf.cell(20, 6, f"{item['qtd']:02d}", border=1, align="C")
+            pdf.cell(120, 6, f"{item['nome']}", border=1, align="L")
+            pdf.cell(50, 6, f"{vazao_item_str} kg/h", border=1, align="C", ln=1)
+        
+        # Linha VAZÃO TOTAL
+        vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+        if not vazao_total_str or vazao_total_str == ",":
+            vazao_total_str = "0"
+
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(140, 7, "VAZÃO TOTAL:", border=1, align="R", fill=True)
+        pdf.cell(50, 7, f"{vazao_total_str} kg/h", border=1, align="C", fill=True, ln=1)
+
+    return bytes(pdf.output())
+
+st.subheader("4. Geração do Relatório")
+
+if st.button("📄 Gerar Relatório PDF"):
+    dicionario_fotos = {
+        "FACHADA": fotos_fachada,
+        "ABRIGO": fotos_abrigo,
+        "CENTRAL": fotos_central,
+        "EQUIPAMENTOS": fotos_equipamentos
+    }
+    
+    pdf_out = gerar_pdf(
+        st.session_state.equipamentos,
+        dicionario_fotos,
+        cod_cliente,
+        nome_cliente
+    )
+    
+    cod_formatado = cod_cliente.replace(".", "").strip().upper() if cod_cliente else ""
+    nome_arquivo_pdf = f"fotos_{cod_formatado}.pdf" if cod_formatado else "fotos.pdf"
+
+    st.success("✅ Relatório gerado com sucesso!")
+    st.download_button(
+        label="📥 Baixar Relatório (PDF)",
+        data=pdf_out,
+        file_name=nome_arquivo_pdf,
+        mime="application/pdf"
+    )
