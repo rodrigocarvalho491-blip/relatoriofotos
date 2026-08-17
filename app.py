@@ -155,7 +155,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                 except Exception as e:
                     pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1)
 
-    return pdf.output(dest="S").encode("latin-1", errors="ignore")
+    return bytes(pdf.output())
 
 if st.button("📄 Gerar Relatório PDF"):
     dicionario_fotos = {
@@ -182,7 +182,7 @@ if st.button("📄 Gerar Relatório PDF"):
 
 st.divider()
 
-# --- SEÇÃO 4: CADASTRO DE EQUIPAMENTOS (POR FIM) ---
+# --- SEÇÃO 4: CADASTRO DE EQUIPAMENTOS ---
 st.subheader("4. Cadastro de Equipamentos")
 
 col_qtd, col_eq, col_vaz, col_btn = st.columns([1, 2, 2, 1])
