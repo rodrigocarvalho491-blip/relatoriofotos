@@ -3,10 +3,10 @@ from PIL import Image
 from fpdf import FPDF
 import streamlit as st
 
-# 1. Configuração do ambiente e resolução de caminhos absolutos
+# 1. Resolução de caminhos absolutos
 DIRETORIO_ATUAL = os.path.dirname(os.path.abspath(__file__))
 LOGO_PATH = os.path.join(DIRETORIO_ATUAL, "logo.png")
-TIMBRADO_PNG = os.path.join(DIRETORIO_ATUAL, "timbrado.png")
+LOGO2_PATH = os.path.join(DIRETORIO_ATUAL, "logo2.png")
 
 st.set_page_config(page_title="Relatório Fotográfico", page_icon="📷", layout="wide")
 
@@ -32,7 +32,7 @@ with col_logo:
 
 with col_titulo:
     st.title("Relatório Fotográfico & Equipamentos")
-    st.markdown("Gerador automatizado de relatórios técnicos com layout timbrado.")
+    st.markdown("Gerador automatizado de relatórios técnicos.")
 
 st.divider()
 
@@ -74,20 +74,17 @@ st.divider()
 class RelatorioPDF(FPDF):
     def __init__(self, cod_cliente="", nome_cliente=""):
         super().__init__()
-        # Remove pontos do código e formata os dados do cliente em CAIXA ALTA
         self.cod_cliente = cod_cliente.replace(".", "").strip().upper() if cod_cliente else ""
         self.nome_cliente = nome_cliente.strip().upper() if nome_cliente else ""
 
     def header(self):
-        # Desativa temporariamente a quebra de página automática para desenhar o fundo timbrado
-        if os.path.exists(TIMBRADO_PNG):
-            self.set_auto_page_break(auto=False)
-            self.image(TIMBRADO_PNG, x=0, y=0, w=210, h=297)
-            self.set_auto_page_break(auto=True, margin=20)
+        # Renderiza a logo2.png no canto superior esquerdo em todas as páginas
+        if os.path.exists(LOGO2_PATH):
+            self.image(LOGO2_PATH, x=10, y=8, w=45)
 
-        # Exibe o título centralizado e dados do cliente APENAS na primeira página
+        # Exibe o título do relatório e identificação do cliente na primeira página
         if self.page_no() == 1:
-            self.set_y(15)
+            self.set_y(10)
             self.set_font("Arial", "B", 15)
             self.cell(0, 8, "RELATÓRIO DE FOTOS", align="C", ln=1)
             
@@ -95,9 +92,12 @@ class RelatorioPDF(FPDF):
             if info_cabecalho:
                 self.set_font("Arial", "B", 11)
                 self.cell(0, 6, info_cabecalho, align="C", ln=1)
-            self.ln(6)
+            
+            # Recuo vertical de segurança para não encavalar o conteúdo com o cabeçalho
+            self.set_y(35)
         else:
-            self.set_y(20)
+            # Recuo vertical para as páginas seguintes ficarem abaixo da logo2
+            self.set_y(35)
 
     def footer(self):
         self.set_y(-15)
@@ -106,6 +106,9 @@ class RelatorioPDF(FPDF):
 
 def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
     pdf = RelatorioPDF(cod_cliente, nome_cliente)
+    
+    # Margens: esquerda 10mm, superior 35mm (evita sobreposição com a logo), direita 10mm
+    pdf.set_margins(10, 35, 10)
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
 
@@ -127,7 +130,6 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
 
     for categoria, arquivos in dic_fotos.items():
         if arquivos:
-            # Nome do item alinhado à esquerda sem numeração (ex: FACHADA)
             pdf.set_font("Arial", "B", 11)
             pdf.cell(0, 6, categoria.upper(), ln=1, align="L")
             
@@ -140,7 +142,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                     temp_path = f"temp_{categoria}_{idx}.jpg"
                     img.save(temp_path)
                     
-                    # Imagem centralizada horizontalmente na página
+                    # Imagem centralizada horizontalmente
                     pdf.image(temp_path, x="C", w=140)
                     pdf.ln(6)
                     
@@ -168,7 +170,6 @@ if st.button("📄 Gerar Relatório PDF"):
         nome_cliente
     )
     
-    # Formata nome do arquivo de saída no padrão: fotos_<código sem pontos>.pdf
     cod_formatado = cod_cliente.replace(".", "").strip().upper() if cod_cliente else ""
     nome_arquivo_pdf = f"fotos_{cod_formatado}.pdf" if cod_formatado else "fotos.pdf"
 
@@ -204,7 +205,6 @@ with col_btn:
                 vazao_unit = float(vazao_clean_str)
                 qtd = int(qtd_input)
                 
-                # Multiplica a vazão unitária pela quantidade do equipamento
                 vazao_total_item = vazao_unit * qtd
                 vazao_formatada = f"{vazao_total_item:.2f}".replace('.', ',').rstrip('0').rstrip(',')
 
