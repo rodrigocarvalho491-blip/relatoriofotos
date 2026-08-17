@@ -18,27 +18,49 @@ CUSTOM_CSS = """
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-st.title("📷 Relatório Fotográfico & Lista de Equipamentos")
+# Definição de caminhos fixos de arquivos da pasta
+LOGO_PATH = "logo.png"
+TIMBRADO_PNG = "timbrado.png"
+TIMBRADO_JPG = "timbrado.jpg"
+
+def obter_caminho_timbrado():
+    if os.path.exists(TIMBRADO_PNG):
+        return TIMBRADO_PNG
+    elif os.path.exists(TIMBRADO_JPG):
+        return TIMBRADO_JPG
+    return None
+
+# --- CABEÇALHO DO APP COM LOGO ---
+col_logo, col_titulo = st.columns([1, 4])
+
+with col_logo:
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, width=150)
+    else:
+        st.caption("📷 *Adicione 'logo.png' na pasta do projeto*")
+
+with col_titulo:
+    st.title("Relatório Fotográfico & Equipamentos")
+    st.markdown("Gerador automatizado de relatórios técnicos com layout timbrado.")
+
 st.divider()
 
 if "equipamentos" not in st.session_state:
     st.session_state.equipamentos = []
 
-# --- SEÇÃO 1: DADOS DO CLIENTE E TIMBRADO ---
+# --- SEÇÃO 1: DADOS DO CLIENTE ---
 st.subheader("1. Identificação do Cliente")
-col_c1, col_c2, col_c3 = st.columns([1, 2, 2])
+col_c1, col_c2 = st.columns(2)
 
 with col_c1:
     cod_cliente = st.text_input("Código do Cliente", placeholder="Ex: 87.653")
 with col_c2:
     nome_cliente = st.text_input("Nome / Razão Social", placeholder="Ex: SABOR DA TERRA ALIMENTACAO CORPORATIVA")
-with col_c3:
-    img_timbrado = st.file_uploader("Papel Timbrado (Opcional)", type=["png", "jpg", "jpeg"])
 
 st.divider()
 
 # --- SEÇÃO 2: EQUIPAMENTOS E CÁLCULO DE VAZÃO ---
-st.subheader("2. Equipamentos e Vazão")
+st.subheader("2. Cadastro de Equipamentos")
 
 col_qtd, col_eq, col_vaz, col_btn = st.columns([1, 2, 2, 1])
 
@@ -47,7 +69,7 @@ with col_qtd:
 with col_eq:
     nome_eq_input = st.text_input("Equipamento", placeholder="Ex: Forno Industrial")
 with col_vaz:
-    vazao_input = st.text_input("Vazão por Equipamento", placeholder="Ex: 1 ou 1,6")
+    vazao_input = st.text_input("Vazão Unitária (kg/h)", placeholder="Ex: 1 ou 1,6")
 
 with col_btn:
     st.write(" ")
@@ -55,32 +77,35 @@ with col_btn:
     if st.button("➕ Adicionar"):
         if nome_eq_input.strip() and vazao_input.strip():
             try:
-                # Converte e padroniza a vazão digitada
                 vazao_clean_str = vazao_input.replace(",", ".").lower().replace("kg/h", "").strip()
-                vazao_val = float(vazao_clean_str)
-                vazao_formatada_exibicao = f"{vazao_val:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+                vazao_unit = float(vazao_clean_str)
+                qtd = int(qtd_input)
+                
+                # Multiplica a vazão unitária pela quantidade para consolidar a linha
+                vazao_total_item = vazao_unit * qtd
+                vazao_formatada = f"{vazao_total_item:.2f}".replace('.', ',').rstrip('0').rstrip(',')
 
                 item_dict = {
-                    "qtd": int(qtd_input),
+                    "qtd": qtd,
                     "nome": nome_eq_input.strip(),
-                    "vazao_unit": vazao_val,
-                    "texto": f"{int(qtd_input):02d} - {nome_eq_input.strip()} - {vazao_formatada_exibicao} kg/h"
+                    "vazao_unit": vazao_unit,
+                    "vazao_total_item": vazao_total_item,
+                    "texto": f"{qtd:02d} - {nome_eq_input.strip()} - {vazao_formatada} kg/h"
                 }
                 st.session_state.equipamentos.append(item_dict)
                 st.success("Adicionado!")
             except ValueError:
                 st.error("Informe um valor numérico válido para a vazão.")
         else:
-            st.warning("Preencha o nome do equipamento e a vazão.")
+            st.warning("Preencha o equipamento e a vazão.")
 
-# Exibição da Lista e Soma Total da Vazão
+# Exibição e Totalização
 if st.session_state.equipamentos:
-    st.write("**Itens Cadastrados:**")
+    st.write("**Lista de Equipamentos:**")
     total_vazao = 0.0
     
     for idx, item in enumerate(st.session_state.equipamentos):
-        # Multiplica a vazão informada pela quantidade do item
-        total_vazao += item["qtd"] * item["vazao_unit"]
+        total_vazao += item["vazao_total_item"]
         
         c_txt, c_del = st.columns([5, 1])
         c_txt.text(item["texto"])
@@ -116,23 +141,16 @@ st.divider()
 
 # --- SEÇÃO 4: GERADOR DE PDF ---
 class RelatorioPDF(FPDF):
-    def __init__(self, timbrado_bytes=None, cod_cliente="", nome_cliente=""):
+    def __init__(self, cod_cliente="", nome_cliente=""):
         super().__init__()
-        self.timbrado_bytes = timbrado_bytes
         self.cod_cliente = cod_cliente
         self.nome_cliente = nome_cliente
+        self.caminho_timbrado = obter_caminho_timbrado()
 
     def header(self):
-        if self.timbrado_bytes:
+        if self.caminho_timbrado:
             try:
-                img_temp = "temp_timbrado.jpg"
-                img = Image.open(io.BytesIO(self.timbrado_bytes))
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-                img.save(img_temp)
-                self.image(img_temp, x=0, y=0, w=210, h=297)
-                if os.path.exists(img_temp):
-                    os.remove(img_temp)
+                self.image(self.caminho_timbrado, x=0, y=0, w=210, h=297)
             except Exception:
                 pass
 
@@ -151,14 +169,11 @@ class RelatorioPDF(FPDF):
         self.set_font("Arial", "I", 8)
         self.cell(0, 10, f"Página {self.page_no()}", align="C")
 
-def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente, timbrado_file):
-    timbrado_bytes = timbrado_file.read() if timbrado_file else None
-    
-    pdf = RelatorioPDF(timbrado_bytes, cod_cliente, nome_cliente)
+def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
+    pdf = RelatorioPDF(cod_cliente, nome_cliente)
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
 
-    # Inserção da Lista de Equipamentos e Totalizador
     if equipamentos:
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1)
@@ -166,7 +181,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente, timbrado_file)
         
         total_vazao = 0.0
         for item in equipamentos:
-            total_vazao += item["qtd"] * item["vazao_unit"]
+            total_vazao += item["vazao_total_item"]
             pdf.cell(0, 5, item["texto"], ln=1)
         
         vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
@@ -175,7 +190,6 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente, timbrado_file)
         pdf.cell(0, 6, f"Total vazão: {vazao_total_str} kg/h", ln=1)
         pdf.ln(4)
 
-    # Inserção das Fotos organizadas por categoria
     for categoria, arquivos in dic_fotos.items():
         if arquivos:
             for idx, arq in enumerate(arquivos):
@@ -212,8 +226,7 @@ if st.button("📄 Gerar Relatório PDF"):
         st.session_state.equipamentos,
         dicionario_fotos,
         cod_cliente,
-        nome_cliente,
-        img_timbrado
+        nome_cliente
     )
     
     st.success("✅ Relatório gerado com sucesso!")
