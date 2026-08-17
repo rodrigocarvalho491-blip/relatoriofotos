@@ -3,6 +3,7 @@ from fpdf import FPDF
 from PIL import Image
 import io
 import os
+import zipfile
 
 # 1. Configuração da página e Estilo
 st.set_page_config(page_title="Relatório Fotográfico", page_icon="📷", layout="wide")
@@ -18,16 +19,31 @@ CUSTOM_CSS = """
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-# Definição de caminhos fixos de arquivos da pasta
+# Caminhos fixos de arquivos suportados na pasta do projeto
 LOGO_PATH = "logo.png"
 TIMBRADO_PNG = "timbrado.png"
 TIMBRADO_JPG = "timbrado.jpg"
+TIMBRADO_DOCX = "timbrado.docx"
 
 def obter_caminho_timbrado():
+    """Identifica o timbrado em imagem ou extrai a imagem do fundo do arquivo .docx."""
     if os.path.exists(TIMBRADO_PNG):
         return TIMBRADO_PNG
     elif os.path.exists(TIMBRADO_JPG):
         return TIMBRADO_JPG
+    elif os.path.exists(TIMBRADO_DOCX):
+        try:
+            # Extrai automaticamente a imagem timbrada de dentro do arquivo Word (.docx)
+            with zipfile.ZipFile(TIMBRADO_DOCX, 'r') as z:
+                for filename in z.namelist():
+                    if filename.startswith('word/media/image'):
+                        ext = filename.split('.')[-1]
+                        out_path = f"temp_timbrado.{ext}"
+                        with open(out_path, 'wb') as f:
+                            f.write(z.read(filename))
+                        return out_path
+        except Exception:
+            pass
     return None
 
 # --- CABEÇALHO DO APP COM LOGO ---
@@ -91,21 +107,26 @@ class RelatorioPDF(FPDF):
         self.caminho_timbrado = obter_caminho_timbrado()
 
     def header(self):
+        # Papel timbrado em todas as páginas
         if self.caminho_timbrado:
             try:
                 self.image(self.caminho_timbrado, x=0, y=0, w=210, h=297)
             except Exception:
                 pass
 
-        self.set_y(15)
-        self.set_font("Arial", "B", 15)
-        self.cell(0, 8, "RELATÓRIO DE FOTOS", align="C", ln=1)
-        
-        info_cabecalho = f"{self.cod_cliente} | {self.nome_cliente}".strip(" |")
-        if info_cabecalho:
-            self.set_font("Arial", "B", 11)
-            self.cell(0, 6, info_cabecalho, align="C", ln=1)
-        self.ln(6)
+        # Exibe o título centralizado APENAS na primeira página
+        if self.page_no() == 1:
+            self.set_y(15)
+            self.set_font("Arial", "B", 15)
+            self.cell(0, 8, "RELATÓRIO DE FOTOS", align="C", ln=1)
+            
+            info_cabecalho = f"{self.cod_cliente} | {self.nome_cliente}".strip(" |")
+            if info_cabecalho:
+                self.set_font("Arial", "B", 11)
+                self.cell(0, 6, info_cabecalho, align="C", ln=1)
+            self.ln(6)
+        else:
+            self.set_y(20)
 
     def footer(self):
         self.set_y(-15)
@@ -119,26 +140,27 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
 
     if equipamentos:
         pdf.set_font("Arial", "B", 11)
-        pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1)
+        pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1, align="L")
         pdf.set_font("Arial", "", 10)
         
         total_vazao = 0.0
         for item in equipamentos:
             total_vazao += item["vazao_total_item"]
-            pdf.cell(0, 5, item["texto"], ln=1)
+            pdf.cell(0, 5, item["texto"], ln=1, align="L")
         
         vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
         pdf.ln(2)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, f"Total vazão: {vazao_total_str} kg/h", ln=1)
+        pdf.cell(0, 6, f"Total vazão: {vazao_total_str} kg/h", ln=1, align="L")
         pdf.ln(4)
 
     for categoria, arquivos in dic_fotos.items():
         if arquivos:
+            # Imprime apenas o nome do item alinhado à esquerda sem numeração
+            pdf.set_font("Arial", "B", 11)
+            pdf.cell(0, 6, categoria, ln=1, align="L")
+            
             for idx, arq in enumerate(arquivos):
-                pdf.set_font("Arial", "B", 11)
-                pdf.cell(0, 6, f"{categoria} {idx + 1 if len(arquivos) > 1 else ''}".strip(), ln=1)
-                
                 try:
                     img = Image.open(arq)
                     if img.mode != "RGB":
@@ -147,13 +169,14 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                     temp_path = f"temp_{categoria}_{idx}.jpg"
                     img.save(temp_path)
                     
-                    pdf.image(temp_path, w=140)
+                    # Imagem centralizada
+                    pdf.image(temp_path, x="C", w=140)
                     pdf.ln(6)
                     
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
                 except Exception as e:
-                    pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1)
+                    pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1, align="L")
 
     return bytes(pdf.output())
 
