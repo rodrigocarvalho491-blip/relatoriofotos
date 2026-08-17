@@ -52,8 +52,7 @@ st.divider()
 
 # --- SEÇÃO 2: UPLOAD DE FOTOS ---
 def carregar_fotos(label, max_arquivos=None):
-    limite_txt = f"(Máximo {max_arquivos})" if max_arquivos else "(Ilimitado)"
-    fotos = st.file_uploader(f"{label} {limite_txt}", type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=label)
+    fotos = st.file_uploader(label, type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=label)
     if max_arquivos and fotos and len(fotos) > max_arquivos:
         st.error(f"⚠️ Limite excedido para {label}. Serão considerados apenas os primeiros {max_arquivos} arquivos.")
         return fotos[:max_arquivos]
@@ -63,9 +62,9 @@ st.subheader("2. Upload de Imagens do Relatório")
 col_f1, col_f2 = st.columns(2)
 with col_f1:
     fotos_fachada = carregar_fotos("FACHADA", max_arquivos=2)
-    fotos_central = carregar_fotos("CENTRAL", max_arquivos=2)
+    fotos_central = carregar_fotos("CENTRAL", max_arquivos=5)
 with col_f2:
-    fotos_abrigo = carregar_fotos("ABRIGO", max_arquivos=4)
+    fotos_abrigo = carregar_fotos("ABRIGO", max_arquivos=10)
     fotos_equipamentos = carregar_fotos("EQUIPAMENTOS", max_arquivos=None)
 
 st.divider()
