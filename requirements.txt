@@ -1,0 +1,7 @@
+streamlit
+openpyxl
+pandas
+fpdf2
+Pillow
+streamlit-mic-recorder
+SpeechRecognition
