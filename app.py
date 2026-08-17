@@ -77,11 +77,9 @@ class RelatorioPDF(FPDF):
         self.nome_cliente = nome_cliente.strip().upper() if nome_cliente else ""
 
     def header(self):
-        # Renderiza a logo2.png no canto superior esquerdo em todas as páginas
         if os.path.exists(LOGO2_PATH):
             self.image(LOGO2_PATH, x=10, y=8, w=45)
 
-        # Exibe o título do relatório e identificação do cliente na primeira página
         if self.page_no() == 1:
             self.set_y(10)
             self.set_font("Arial", "B", 15)
@@ -92,10 +90,8 @@ class RelatorioPDF(FPDF):
                 self.set_font("Arial", "B", 11)
                 self.cell(0, 6, info_cabecalho, align="C", ln=1)
             
-            # Recuo vertical de segurança para não encavalar o conteúdo com o cabeçalho
             self.set_y(35)
         else:
-            # Recuo vertical para as páginas seguintes ficarem abaixo da logo2
             self.set_y(35)
 
     def footer(self):
@@ -105,8 +101,6 @@ class RelatorioPDF(FPDF):
 
 def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
     pdf = RelatorioPDF(cod_cliente, nome_cliente)
-    
-    # Margens: esquerda 10mm, superior 35mm, direita 10mm
     pdf.set_margins(10, 35, 10)
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
@@ -114,18 +108,37 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
     if equipamentos:
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1, align="L")
-        pdf.set_font("Arial", "", 10)
+        pdf.ln(2)
         
+        # Cabeçalho da Tabela
+        pdf.set_font("Arial", "B", 10)
+        pdf.set_fill_color(230, 230, 230)
+        pdf.cell(20, 7, "QTD", border=1, align="C", fill=True)
+        pdf.cell(120, 7, "EQUIPAMENTO", border=1, align="C", fill=True)
+        pdf.cell(50, 7, "VAZÃO TOTAL (KG/H)", border=1, align="C", fill=True, ln=1)
+        
+        # Linhas de Equipamentos da Tabela
+        pdf.set_font("Arial", "", 10)
         total_vazao = 0.0
         for item in equipamentos:
             total_vazao += item["vazao_total_item"]
-            pdf.cell(0, 5, item["texto"], ln=1, align="L")
+            vazao_item_str = f"{item['vazao_total_item']:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+            if not vazao_item_str or vazao_item_str == ",":
+                vazao_item_str = "0"
+            
+            pdf.cell(20, 6, f"{item['qtd']:02d}", border=1, align="C")
+            pdf.cell(120, 6, f"{item['nome']}", border=1, align="L")
+            pdf.cell(50, 6, f"{vazao_item_str} kg/h", border=1, align="C", ln=1)
         
+        # Linha com o Total da Vazão
         vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
-        pdf.ln(2)
+        if not vazao_total_str or vazao_total_str == ",":
+            vazao_total_str = "0"
+
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, f"VAZÃO TOTAL: {vazao_total_str} kg/h", ln=1, align="L")
-        pdf.ln(4)
+        pdf.cell(140, 7, "VAZÃO TOTAL:", border=1, align="R", fill=True)
+        pdf.cell(50, 7, f"{vazao_total_str} kg/h", border=1, align="C", fill=True, ln=1)
+        pdf.ln(6)
 
     for categoria, arquivos in dic_fotos.items():
         if arquivos:
@@ -141,7 +154,6 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                     temp_path = f"temp_{categoria}_{idx}.jpg"
                     img.save(temp_path)
                     
-                    # Imagem centralizada horizontalmente
                     pdf.image(temp_path, x="C", w=140)
                     pdf.ln(6)
                     
@@ -222,7 +234,7 @@ with col_btn:
             st.warning("Preencha o equipamento e a vazão.")
 
 if st.session_state.equipamentos:
-    st.write("**Lista de Equipamentos:**")
+    st.write("**Lista de Equipamentos Cadastrados:**")
     total_vazao = 0.0
     
     for idx, item in enumerate(st.session_state.equipamentos):
