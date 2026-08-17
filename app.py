@@ -59,67 +59,8 @@ with col_c2:
 
 st.divider()
 
-# --- SEÇÃO 2: EQUIPAMENTOS E CÁLCULO DE VAZÃO ---
-st.subheader("2. Cadastro de Equipamentos")
-
-col_qtd, col_eq, col_vaz, col_btn = st.columns([1, 2, 2, 1])
-
-with col_qtd:
-    qtd_input = st.number_input("Quantidade", min_value=1, value=1, step=1)
-with col_eq:
-    nome_eq_input = st.text_input("Equipamento", placeholder="Ex: Forno Industrial")
-with col_vaz:
-    vazao_input = st.text_input("Vazão Unitária (kg/h)", placeholder="Ex: 1 ou 1,6")
-
-with col_btn:
-    st.write(" ")
-    st.write(" ")
-    if st.button("➕ Adicionar"):
-        if nome_eq_input.strip() and vazao_input.strip():
-            try:
-                vazao_clean_str = vazao_input.replace(",", ".").lower().replace("kg/h", "").strip()
-                vazao_unit = float(vazao_clean_str)
-                qtd = int(qtd_input)
-                
-                # Multiplica a vazão unitária pela quantidade para consolidar a linha
-                vazao_total_item = vazao_unit * qtd
-                vazao_formatada = f"{vazao_total_item:.2f}".replace('.', ',').rstrip('0').rstrip(',')
-
-                item_dict = {
-                    "qtd": qtd,
-                    "nome": nome_eq_input.strip(),
-                    "vazao_unit": vazao_unit,
-                    "vazao_total_item": vazao_total_item,
-                    "texto": f"{qtd:02d} - {nome_eq_input.strip()} - {vazao_formatada} kg/h"
-                }
-                st.session_state.equipamentos.append(item_dict)
-                st.success("Adicionado!")
-            except ValueError:
-                st.error("Informe um valor numérico válido para a vazão.")
-        else:
-            st.warning("Preencha o equipamento e a vazão.")
-
-# Exibição e Totalização
-if st.session_state.equipamentos:
-    st.write("**Lista de Equipamentos:**")
-    total_vazao = 0.0
-    
-    for idx, item in enumerate(st.session_state.equipamentos):
-        total_vazao += item["vazao_total_item"]
-        
-        c_txt, c_del = st.columns([5, 1])
-        c_txt.text(item["texto"])
-        if c_del.button("❌", key=f"del_{idx}"):
-            st.session_state.equipamentos.pop(idx)
-            st.rerun()
-
-    vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
-    st.markdown(f"**Total vazão: {vazao_total_str} kg/h**")
-
-st.divider()
-
-# --- SEÇÃO 3: UPLOAD DE FOTOS ---
-st.subheader("3. Upload de Imagens do Relatório")
+# --- SEÇÃO 2: UPLOAD DE FOTOS ---
+st.subheader("2. Upload de Imagens do Relatório")
 
 def carregar_fotos(label, max_arquivos=None):
     limite_txt = f"(Máximo {max_arquivos})" if max_arquivos else "(Ilimitado)"
@@ -139,7 +80,9 @@ with col_f2:
 
 st.divider()
 
-# --- SEÇÃO 4: GERADOR DE PDF ---
+# --- SEÇÃO 3: GERAÇÃO DO RELATÓRIO PDF ---
+st.subheader("3. Geração do Relatório")
+
 class RelatorioPDF(FPDF):
     def __init__(self, cod_cliente="", nome_cliente=""):
         super().__init__()
@@ -236,3 +179,60 @@ if st.button("📄 Gerar Relatório PDF"):
         file_name=f"Relatorio_{cod_cliente if cod_cliente else 'Fotos'}.pdf",
         mime="application/pdf"
     )
+
+st.divider()
+
+# --- SEÇÃO 4: CADASTRO DE EQUIPAMENTOS (POR FIM) ---
+st.subheader("4. Cadastro de Equipamentos")
+
+col_qtd, col_eq, col_vaz, col_btn = st.columns([1, 2, 2, 1])
+
+with col_qtd:
+    qtd_input = st.number_input("Quantidade", min_value=1, value=1, step=1, key="eq_qtd")
+with col_eq:
+    nome_eq_input = st.text_input("Equipamento", placeholder="Ex: Forno Industrial", key="eq_nome")
+with col_vaz:
+    vazao_input = st.text_input("Vazão Unitária (kg/h)", placeholder="Ex: 1 ou 1,6", key="eq_vazao")
+
+with col_btn:
+    st.write(" ")
+    st.write(" ")
+    if st.button("➕ Adicionar", key="btn_add_eq"):
+        if nome_eq_input.strip() and vazao_input.strip():
+            try:
+                vazao_clean_str = vazao_input.replace(",", ".").lower().replace("kg/h", "").strip()
+                vazao_unit = float(vazao_clean_str)
+                qtd = int(qtd_input)
+                
+                vazao_total_item = vazao_unit * qtd
+                vazao_formatada = f"{vazao_total_item:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+
+                item_dict = {
+                    "qtd": qtd,
+                    "nome": nome_eq_input.strip(),
+                    "vazao_unit": vazao_unit,
+                    "vazao_total_item": vazao_total_item,
+                    "texto": f"{qtd:02d} - {nome_eq_input.strip()} - {vazao_formatada} kg/h"
+                }
+                st.session_state.equipamentos.append(item_dict)
+                st.success("Adicionado!")
+            except ValueError:
+                st.error("Informe um valor numérico válido para a vazão.")
+        else:
+            st.warning("Preencha o equipamento e a vazão.")
+
+if st.session_state.equipamentos:
+    st.write("**Lista de Equipamentos:**")
+    total_vazao = 0.0
+    
+    for idx, item in enumerate(st.session_state.equipamentos):
+        total_vazao += item["vazao_total_item"]
+        
+        c_txt, c_del = st.columns([5, 1])
+        c_txt.text(item["texto"])
+        if c_del.button("❌", key=f"del_{idx}"):
+            st.session_state.equipamentos.pop(idx)
+            st.rerun()
+
+    vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+    st.markdown(f"**Total vazão: {vazao_total_str} kg/h**")
