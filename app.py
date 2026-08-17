@@ -106,7 +106,7 @@ class RelatorioPDF(FPDF):
 def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
     pdf = RelatorioPDF(cod_cliente, nome_cliente)
     
-    # Margens: esquerda 10mm, superior 35mm (evita sobreposição com a logo), direita 10mm
+    # Margens: esquerda 10mm, superior 35mm, direita 10mm
     pdf.set_margins(10, 35, 10)
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.add_page()
@@ -124,7 +124,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
         vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
         pdf.ln(2)
         pdf.set_font("Arial", "B", 10)
-        pdf.cell(0, 6, f"Total vazão: {vazao_total_str} kg/h", ln=1, align="L")
+        pdf.cell(0, 6, f"VAZÃO TOTAL: {vazao_total_str} kg/h", ln=1, align="L")
         pdf.ln(4)
 
     for categoria, arquivos in dic_fotos.items():
@@ -235,4 +235,4 @@ if st.session_state.equipamentos:
             st.rerun()
 
     vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
-    st.markdown(f"**Total vazão: {vazao_total_str} kg/h**")
+    st.markdown(f"**VAZÃO TOTAL: {vazao_total_str} kg/h**")
