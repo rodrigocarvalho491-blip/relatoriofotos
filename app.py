@@ -185,9 +185,9 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                 except Exception as e:
                     pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1, align="L")
 
-    # 2. Renderiza a Tabela de Equipamentos ao Final do Relatório
+    # 2. Renderiza a Tabela de Equipamentos em uma Página Inteira Exclusiva ao Final
     if equipamentos:
-        pdf.ln(4)
+        pdf.add_page()  # Garante que a tabela inicie do topo de uma nova página
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1, align="L")
         pdf.ln(2)
