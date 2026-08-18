@@ -63,6 +63,7 @@ col_f1, col_f2 = st.columns(2)
 with col_f1:
     fotos_fachada = carregar_fotos("FACHADA", max_arquivos=2)
     fotos_central = carregar_fotos("CENTRAL", max_arquivos=5)
+    fotos_cilindros = carregar_fotos("CILINDROS", max_arquivos=5)
 with col_f2:
     fotos_abrigo = carregar_fotos("ABRIGO", max_arquivos=10)
     fotos_equipamentos = carregar_fotos("EQUIPAMENTOS", max_arquivos=None)
@@ -187,7 +188,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
 
     # 2. Renderiza a Tabela de Equipamentos em uma Página Inteira Exclusiva ao Final
     if equipamentos:
-        pdf.add_page()  # Garante que a tabela inicie do topo de uma nova página
+        pdf.add_page()
         pdf.set_font("Arial", "B", 11)
         pdf.cell(0, 6, "LISTA DE EQUIPAMENTOS E VAZÕES", ln=1, align="L")
         pdf.ln(2)
@@ -230,6 +231,7 @@ if st.button("📄 Gerar Relatório PDF"):
         "FACHADA": fotos_fachada,
         "ABRIGO": fotos_abrigo,
         "CENTRAL": fotos_central,
+        "CILINDROS": fotos_cilindros,
         "EQUIPAMENTOS": fotos_equipamentos
     }
     
