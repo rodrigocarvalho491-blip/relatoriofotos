@@ -161,13 +161,14 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
     pdf = RelatorioPDF(cod_cliente, nome_cliente)
     pdf.set_margins(10, 35, 10)
     pdf.set_auto_page_break(auto=True, margin=20)
-    pdf.add_page()
 
-    # 1. Renderiza as Fotos Primeiro
+    # 1. Renderiza as Fotos (Cada categoria inicia no topo de uma nova página)
     for categoria, arquivos in dic_fotos.items():
         if arquivos:
+            pdf.add_page()  # Nova página para cada categoria de fotos
             pdf.set_font("Arial", "B", 11)
             pdf.cell(0, 6, categoria.upper(), ln=1, align="L")
+            pdf.ln(2)
             
             for idx, arq in enumerate(arquivos):
                 try:
@@ -178,15 +179,16 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                     temp_path = f"temp_{categoria}_{idx}.jpg"
                     img.save(temp_path)
                     
-                    pdf.image(temp_path, x="C", w=140)
-                    pdf.ln(6)
+                    # Largura padronizada de 130mm para alinhamento uniforme
+                    pdf.image(temp_path, x="C", w=130)
+                    pdf.ln(3)  # Quebra de linha simples/espaçamento mínimo entre fotos
                     
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
                 except Exception as e:
                     pdf.cell(0, 6, f"Erro ao processar imagem: {e}", ln=1, align="L")
 
-    # 2. Renderiza a Tabela de Equipamentos em uma Página Inteira Exclusiva ao Final
+    # 2. Renderiza a Tabela de Equipamentos em uma Página Exclusiva ao Final
     if equipamentos:
         pdf.add_page()
         pdf.set_font("Arial", "B", 11)
@@ -221,6 +223,10 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
         pdf.set_font("Arial", "B", 10)
         pdf.cell(140, 7, "VAZÃO TOTAL:", border=1, align="R", fill=True)
         pdf.cell(50, 7, f"{vazao_total_str} kg/h", border=1, align="C", fill=True, ln=1)
+
+    # Garante que ao menos uma página existe caso nenhum dado seja enviado
+    if pdf.page_no() == 0:
+        pdf.add_page()
 
     return bytes(pdf.output())
 
