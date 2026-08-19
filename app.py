@@ -2,6 +2,7 @@ import os
 from PIL import Image
 from fpdf import FPDF
 import streamlit as st
+import streamlit.components.v1 as components
 
 # 1. Resolução de caminhos absolutos
 DIRETORIO_ATUAL = os.path.dirname(os.path.abspath(__file__))
@@ -19,31 +20,6 @@ CUSTOM_CSS = """
         background-color: #004080 !important; color: #ffffff !important;
         border-radius: 8px !important; border: none !important; font-weight: bold !important;
     }
-
-    /* CSS PARA O BOTÃO FLUTUANTE (NOVO CLIENTE) */
-    div[data-testid="element-container"]:has(.btn-flutuante) + div[data-testid="element-container"] {
-        position: fixed;
-        bottom: 40px;
-        right: 40px;
-        z-index: 9999;
-    }
-    
-    div[data-testid="element-container"]:has(.btn-flutuante) + div[data-testid="element-container"] button {
-        background-color: #FF4B4B !important; /* Cor vermelha para dar destaque */
-        color: white !important;
-        border-radius: 30px !important;
-        padding: 15px 30px !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        font-size: 16px !important;
-        border: 2px solid white !important;
-        transition: all 0.3s ease;
-    }
-    
-    div[data-testid="element-container"]:has(.btn-flutuante) + div[data-testid="element-container"] button:hover {
-        transform: scale(1.05);
-        box-shadow: 0 6px 15px rgba(0,0,0,0.4) !important;
-        background-color: #FF3333 !important;
-    }
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
@@ -51,11 +27,6 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 # Função para limpar todos os dados e reiniciar o app
 def resetar_dados():
     st.session_state.clear()
-
-# --- BOTÃO FLUTUANTE ---
-# Essa div vazia serve como uma "âncora" para o CSS localizar o botão logo abaixo
-st.markdown('<div class="btn-flutuante"></div>', unsafe_allow_html=True)
-st.button("🔄 Novo Cliente", on_click=resetar_dados)
 
 # --- CABEÇALHO DO APP COM LOGO ---
 col_logo, col_titulo = st.columns([1, 4])
@@ -71,6 +42,58 @@ with col_titulo:
     st.markdown("Gerador automatizado de relatórios técnicos.")
 
 st.divider()
+
+# --- BOTÃO FLUTUANTE VIA JAVASCRIPT ---
+# 1. Criamos o botão normalmente
+st.button("🔄 Novo Cliente", on_click=resetar_dados)
+
+# 2. Injetamos JavaScript puro para encontrar este botão e forçá-lo a flutuar na tela toda
+JS_FLUTUANTE = """
+<script>
+function aplicarBotaoFlutuante() {
+    // Acessa a página principal (fora do iframe do component)
+    const botoes = window.parent.document.querySelectorAll('button');
+    botoes.forEach(btn => {
+        if (btn.innerText.includes('Novo Cliente')) {
+            // Encontra o container que envolve o botão
+            const container = btn.closest('div[data-testid="element-container"]') || btn.closest('.element-container');
+            if(container) {
+                container.style.position = 'fixed';
+                container.style.bottom = '40px';
+                container.style.right = '40px';
+                container.style.zIndex = '9999';
+                container.style.width = 'auto';
+            }
+            // Aplica os estilos visuais de destaque diretamente no botão
+            btn.style.backgroundColor = '#FF4B4B';
+            btn.style.color = 'white';
+            btn.style.border = '2px solid white';
+            btn.style.borderRadius = '30px';
+            btn.style.padding = '15px 30px';
+            btn.style.fontWeight = 'bold';
+            btn.style.fontSize = '16px';
+            btn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
+            btn.style.transition = 'all 0.3s ease';
+            
+            // Efeito Hover
+            btn.onmouseover = function() {
+                this.style.transform = 'scale(1.05)';
+                this.style.backgroundColor = '#FF3333';
+            }
+            btn.onmouseout = function() {
+                this.style.transform = 'scale(1)';
+                this.style.backgroundColor = '#FF4B4B';
+            }
+        }
+    });
+}
+// Executa imediatamente e depois de um curto atraso para garantir o carregamento do DOM
+aplicarBotaoFlutuante();
+setTimeout(aplicarBotaoFlutuante, 500);
+setTimeout(aplicarBotaoFlutuante, 1500);
+</script>
+"""
+components.html(JS_FLUTUANTE, height=0, width=0)
 
 if "equipamentos" not in st.session_state:
     st.session_state.equipamentos = []
