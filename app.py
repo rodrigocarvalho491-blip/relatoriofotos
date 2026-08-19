@@ -24,9 +24,23 @@ CUSTOM_CSS = """
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
-# Função para limpar todos os dados e reiniciar o app
+# Inicializa as variáveis de controle no session_state
+if "reset_counter" not in st.session_state:
+    st.session_state.reset_counter = 0
+
+if "equipamentos" not in st.session_state:
+    st.session_state.equipamentos = []
+
+# Função MESTRE para limpar todos os dados e reiniciar o app
 def resetar_dados():
-    st.session_state.clear()
+    # Ao alterar a variável 'reset_counter', o Streamlit será forçado a recriar 
+    # TODOS os campos de texto e upload de arquivo como se fossem novos, garantindo a limpeza.
+    st.session_state.reset_counter += 1
+    # Limpa os equipamentos que estavam na memória
+    st.session_state.equipamentos = []
+
+# Capturamos o contador atual para anexar na identificação (key) dos campos
+rc = st.session_state.reset_counter
 
 # --- CABEÇALHO DO APP COM LOGO ---
 col_logo, col_titulo = st.columns([1, 4])
@@ -47,15 +61,13 @@ st.divider()
 # 1. Criamos o botão normalmente
 st.button("🔄 Novo Cliente", on_click=resetar_dados)
 
-# 2. Injetamos JavaScript puro para encontrar este botão e forçá-lo a flutuar na tela toda
+# 2. Injetamos JavaScript puro para encontrar este botão e forçá-lo a flutuar
 JS_FLUTUANTE = """
 <script>
 function aplicarBotaoFlutuante() {
-    // Acessa a página principal (fora do iframe do component)
     const botoes = window.parent.document.querySelectorAll('button');
     botoes.forEach(btn => {
         if (btn.innerText.includes('Novo Cliente')) {
-            // Encontra o container que envolve o botão
             const container = btn.closest('div[data-testid="element-container"]') || btn.closest('.element-container');
             if(container) {
                 container.style.position = 'fixed';
@@ -64,7 +76,6 @@ function aplicarBotaoFlutuante() {
                 container.style.zIndex = '9999';
                 container.style.width = 'auto';
             }
-            // Aplica os estilos visuais de destaque diretamente no botão
             btn.style.backgroundColor = '#FF4B4B';
             btn.style.color = 'white';
             btn.style.border = '2px solid white';
@@ -75,7 +86,6 @@ function aplicarBotaoFlutuante() {
             btn.style.boxShadow = '0 4px 10px rgba(0,0,0,0.3)';
             btn.style.transition = 'all 0.3s ease';
             
-            // Efeito Hover
             btn.onmouseover = function() {
                 this.style.transform = 'scale(1.05)';
                 this.style.backgroundColor = '#FF3333';
@@ -87,7 +97,6 @@ function aplicarBotaoFlutuante() {
         }
     });
 }
-// Executa imediatamente e depois de um curto atraso para garantir o carregamento do DOM
 aplicarBotaoFlutuante();
 setTimeout(aplicarBotaoFlutuante, 500);
 setTimeout(aplicarBotaoFlutuante, 1500);
@@ -95,23 +104,23 @@ setTimeout(aplicarBotaoFlutuante, 1500);
 """
 components.html(JS_FLUTUANTE, height=0, width=0)
 
-if "equipamentos" not in st.session_state:
-    st.session_state.equipamentos = []
 
 # --- SEÇÃO 1: DADOS DO CLIENTE ---
 st.subheader("1. Identificação do Cliente")
 col_c1, col_c2 = st.columns(2)
 
 with col_c1:
-    cod_cliente = st.text_input("Código do Cliente", placeholder="Ex: 87.653", key="input_cod_cliente")
+    # A chave agora inclui o `rc`. Quando o botão é clicado, `rc` muda e o campo zera!
+    cod_cliente = st.text_input("Código do Cliente", placeholder="Ex: 87.653", key=f"input_cod_{rc}")
 with col_c2:
-    nome_cliente = st.text_input("Nome / Razão Social", placeholder="Ex: SABOR DA TERRA ALIMENTACAO CORPORATIVA", key="input_nome_cliente")
+    nome_cliente = st.text_input("Nome / Razão Social", placeholder="Ex: SABOR DA TERRA ALIMENTACAO CORPORATIVA", key=f"input_nome_{rc}")
 
 st.divider()
 
 # --- SEÇÃO 2: UPLOAD DE FOTOS ---
 def carregar_fotos(label, max_arquivos=None):
-    fotos = st.file_uploader(label, type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=label)
+    # A chave do uploader também recebe o `rc` para garantir que as fotos anexadas sumam.
+    fotos = st.file_uploader(label, type=["png", "jpg", "jpeg"], accept_multiple_files=True, key=f"uploader_{label}_{rc}")
     if max_arquivos and fotos and len(fotos) > max_arquivos:
         st.error(f"⚠️ Limite excedido para {label}. Serão considerados apenas os primeiros {max_arquivos} arquivos.")
         return fotos[:max_arquivos]
@@ -135,16 +144,16 @@ st.subheader("3. Cadastro de Equipamentos")
 col_qtd, col_eq, col_vaz, col_btn = st.columns([1, 2, 2, 1])
 
 with col_qtd:
-    qtd_input = st.number_input("Quantidade", min_value=1, value=1, step=1, key="eq_qtd")
+    qtd_input = st.number_input("Quantidade", min_value=1, value=1, step=1, key=f"eq_qtd_{rc}")
 with col_eq:
-    nome_eq_input = st.text_input("Equipamento", placeholder="Ex: Forno Industrial", key="eq_nome")
+    nome_eq_input = st.text_input("Equipamento", placeholder="Ex: Forno Industrial", key=f"eq_nome_{rc}")
 with col_vaz:
-    vazao_input = st.text_input("Vazão Unitária (kg/h)", placeholder="Ex: 1 ou 1,6", key="eq_vazao")
+    vazao_input = st.text_input("Vazão Unitária (kg/h)", placeholder="Ex: 1 ou 1,6", key=f"eq_vazao_{rc}")
 
 with col_btn:
     st.write(" ")
     st.write(" ")
-    if st.button("➕ Adicionar", key="btn_add_eq"):
+    if st.button("➕ Adicionar", key=f"btn_add_eq_{rc}"):
         if nome_eq_input.strip() and vazao_input.strip():
             try:
                 vazao_clean_str = vazao_input.replace(",", ".").lower().replace("kg/h", "").strip()
@@ -177,7 +186,7 @@ if st.session_state.equipamentos:
         
         c_txt, c_del = st.columns([5, 1])
         c_txt.text(item["texto"])
-        if c_del.button("❌", key=f"del_{idx}"):
+        if c_del.button("❌", key=f"del_{idx}_{rc}"):
             st.session_state.equipamentos.pop(idx)
             st.rerun()
 
