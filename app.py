@@ -21,8 +21,12 @@ CUSTOM_CSS = """
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
+# Função para limpar todos os dados e reiniciar o app
+def resetar_dados():
+    st.session_state.clear()
+
 # --- CABEÇALHO DO APP COM LOGO ---
-col_logo, col_titulo = st.columns([1, 4])
+col_logo, col_titulo, col_reset = st.columns([1, 3, 1])
 
 with col_logo:
     if os.path.exists(LOGO_PATH):
@@ -34,6 +38,10 @@ with col_titulo:
     st.title("Relatório Fotográfico & Equipamentos")
     st.markdown("Gerador automatizado de relatórios técnicos.")
 
+with col_reset:
+    st.write(" ")
+    st.button("🔄 Novo Cliente", on_click=resetar_dados, use_container_width=True)
+
 st.divider()
 
 if "equipamentos" not in st.session_state:
@@ -44,9 +52,9 @@ st.subheader("1. Identificação do Cliente")
 col_c1, col_c2 = st.columns(2)
 
 with col_c1:
-    cod_cliente = st.text_input("Código do Cliente", placeholder="Ex: 87.653")
+    cod_cliente = st.text_input("Código do Cliente", placeholder="Ex: 87.653", key="input_cod_cliente")
 with col_c2:
-    nome_cliente = st.text_input("Nome / Razão Social", placeholder="Ex: SABOR DA TERRA ALIMENTACAO CORPORATIVA")
+    nome_cliente = st.text_input("Nome / Razão Social", placeholder="Ex: SABOR DA TERRA ALIMENTACAO CORPORATIVA", key="input_nome_cliente")
 
 st.divider()
 
@@ -93,7 +101,7 @@ with col_btn:
                 qtd = int(qtd_input)
                 
                 vazao_total_item = vazao_unit * qtd
-                vazao_formatada = f"{vazao_total_item:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+                vazao_formatada = f"{vazao_total_item:.2f}".replace(".", ",").rstrip("0").rstrip(",")
 
                 item_dict = {
                     "qtd": qtd,
@@ -122,7 +130,7 @@ if st.session_state.equipamentos:
             st.session_state.equipamentos.pop(idx)
             st.rerun()
 
-    vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+    vazao_total_str = f"{total_vazao:.2f}".replace(".", ",").rstrip("0").rstrip(",")
     st.markdown(f"**VAZÃO TOTAL: {vazao_total_str} kg/h**")
 
 st.divider()
@@ -165,7 +173,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
     # 1. Renderiza as Fotos (Cada categoria inicia no topo de uma nova página)
     for categoria, arquivos in dic_fotos.items():
         if arquivos:
-            pdf.add_page()  # Nova página para cada categoria de fotos
+            pdf.add_page()
             pdf.set_font("Arial", "B", 11)
             pdf.cell(0, 6, categoria.upper(), ln=1, align="L")
             pdf.ln(2)
@@ -181,7 +189,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
                     
                     # Largura padronizada de 130mm para alinhamento uniforme
                     pdf.image(temp_path, x="C", w=130)
-                    pdf.ln(3)  # Quebra de linha simples/espaçamento mínimo entre fotos
+                    pdf.ln(3)
                     
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
@@ -207,7 +215,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
         total_vazao = 0.0
         for item in equipamentos:
             total_vazao += item["vazao_total_item"]
-            vazao_item_str = f"{item['vazao_total_item']:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+            vazao_item_str = f"{item['vazao_total_item']:.2f}".replace(".", ",").rstrip("0").rstrip(",")
             if not vazao_item_str or vazao_item_str == ",":
                 vazao_item_str = "0"
             
@@ -216,7 +224,7 @@ def gerar_pdf(equipamentos, dic_fotos, cod_cliente, nome_cliente):
             pdf.cell(50, 6, f"{vazao_item_str} kg/h", border=1, align="C", ln=1)
         
         # Linha VAZÃO TOTAL
-        vazao_total_str = f"{total_vazao:.2f}".replace('.', ',').rstrip('0').rstrip(',')
+        vazao_total_str = f"{total_vazao:.2f}".replace(".", ",").rstrip("0").rstrip(",")
         if not vazao_total_str or vazao_total_str == ",":
             vazao_total_str = "0"
 
