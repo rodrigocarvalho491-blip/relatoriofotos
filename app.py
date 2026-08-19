@@ -13,9 +13,36 @@ st.set_page_config(page_title="Relatório Fotográfico", page_icon="📷", layou
 CUSTOM_CSS = """
 <style>
     h1, h2, h3 { color: #004080 !important; font-family: 'Segoe UI', sans-serif; }
+    
+    /* Estilo padrão para os botões gerais */
     div.stButton > button:first-child {
         background-color: #004080 !important; color: #ffffff !important;
         border-radius: 8px !important; border: none !important; font-weight: bold !important;
+    }
+
+    /* CSS PARA O BOTÃO FLUTUANTE (NOVO CLIENTE) */
+    div[data-testid="element-container"]:has(.btn-flutuante) + div[data-testid="element-container"] {
+        position: fixed;
+        bottom: 40px;
+        right: 40px;
+        z-index: 9999;
+    }
+    
+    div[data-testid="element-container"]:has(.btn-flutuante) + div[data-testid="element-container"] button {
+        background-color: #FF4B4B !important; /* Cor vermelha para dar destaque */
+        color: white !important;
+        border-radius: 30px !important;
+        padding: 15px 30px !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        font-size: 16px !important;
+        border: 2px solid white !important;
+        transition: all 0.3s ease;
+    }
+    
+    div[data-testid="element-container"]:has(.btn-flutuante) + div[data-testid="element-container"] button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.4) !important;
+        background-color: #FF3333 !important;
     }
 </style>
 """
@@ -25,8 +52,13 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 def resetar_dados():
     st.session_state.clear()
 
+# --- BOTÃO FLUTUANTE ---
+# Essa div vazia serve como uma "âncora" para o CSS localizar o botão logo abaixo
+st.markdown('<div class="btn-flutuante"></div>', unsafe_allow_html=True)
+st.button("🔄 Novo Cliente", on_click=resetar_dados)
+
 # --- CABEÇALHO DO APP COM LOGO ---
-col_logo, col_titulo, col_reset = st.columns([1, 3, 1])
+col_logo, col_titulo = st.columns([1, 4])
 
 with col_logo:
     if os.path.exists(LOGO_PATH):
@@ -37,10 +69,6 @@ with col_logo:
 with col_titulo:
     st.title("Relatório Fotográfico & Equipamentos")
     st.markdown("Gerador automatizado de relatórios técnicos.")
-
-with col_reset:
-    st.write(" ")
-    st.button("🔄 Novo Cliente", on_click=resetar_dados, use_container_width=True)
 
 st.divider()
 
